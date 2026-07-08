@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EB-1 中国大陆排期追踪 · China EB-1 Priority Date Tracker</title>
+<style>
+  :root {
+    --surface-1: #fcfcfb;
+    --page: #f9f9f7;
+    --text-primary: #0b0b0b;
+    --text-secondary: #52514e;
+    --text-muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --series-a: #2a78d6;  /* Final Action / 表A */
+    --series-b: #1baf7a;  /* Dates for Filing / 表B */
+    --series-a-soft: rgba(42,120,214,0.12);
+    --series-b-soft: rgba(27,175,122,0.12);
+    --pd-line: #eb6834;
+    --good: #006300;
+    --card: #ffffff;
+    --shadow: 0 1px 3px rgba(11,11,11,0.06), 0 1px 2px rgba(11,11,11,0.04);
+  }
+  html[data-theme="dark"] {
+    --surface-1: #1a1a19;
+    --page: #0d0d0d;
+    --text-primary: #ffffff;
+    --text-secondary: #c3c2b7;
+    --text-muted: #898781;
+    --grid: #2c2c2a;
+    --axis: #383835;
+    --border: rgba(255,255,255,0.10);
+    --series-a: #3987e5;
+    --series-b: #199e70;
+    --series-a-soft: rgba(57,135,229,0.16);
+    --series-b-soft: rgba(25,158,112,0.16);
+    --pd-line: #f0824f;
+    --good: #0ca30c;
+    --card: #202020;
+    --shadow: 0 1px 3px rgba(0,0,0,0.4), 0 1px 2px rgba(0,0,0,0.3);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--page);
+    color: var(--text-primary);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 28px 20px 60px; }
+
+  header.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 6px; }
+  .title-block h1 { font-size: 24px; line-height: 1.25; margin: 0 0 4px; letter-spacing: -0.01em; }
+  .title-block p.sub { margin: 0; color: var(--text-secondary); font-size: 14px; }
+  .controls { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+  .btn {
+    font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--card); color: var(--text-primary);
+    cursor: pointer; transition: background .15s, border-color .15s;
+  }
+  .btn:hover { border-color: var(--text-muted); }
+  .btn .lbl-en { display: none; }
+  html[data-lang="en"] .btn .lbl-zh { display: none; }
+  html[data-lang="en"] .btn .lbl-en { display: inline; }
+
+  /* language visibility */
+  .zh { display: inline; }
+  .en { display: none; }
+  html[data-lang="en"] .zh { display: none; }
+  html[data-lang="en"] .en { display: inline; }
+  .block.zh { display: block; }
+  html[data-lang="en"] .block.zh { display: none; }
+  .block.en { display: none; }
+  html[data-lang="en"] .block.en { display: block; }
+
+  /* stat tiles */
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 22px 0 26px; }
+  @media (max-width: 720px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+  .tile {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; box-shadow: var(--shadow);
+  }
+  .tile .k { font-size: 12px; color: var(--text-secondary); margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .tile .v { font-size: 22px; font-weight: 650; letter-spacing: -0.01em; }
+  .tile .v small { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+  .tile .m { font-size: 12px; margin-top: 3px; color: var(--text-muted); }
+  .tile .m.up { color: var(--good); }
+  .dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+  .dot.a { background: var(--series-a); }
+  .dot.b { background: var(--series-b); }
+
+  /* projection card */
+  .pd-card { border-top: 3px solid var(--pd-line); }
+  .pd-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .pd-input-wrap { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-secondary); }
+  .pd-input-wrap input {
+    font: inherit; font-size: 14px; padding: 6px 10px; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary);
+    color-scheme: light dark;
+  }
+  .pd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin: 16px 0 6px; }
+  @media (max-width: 640px) { .pd-grid { grid-template-columns: 1fr; } }
+  .pd-item { border: 1px solid var(--border); border-radius: 12px; padding: 15px 16px; background: var(--surface-1); }
+  .pd-item .lab { font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; display: flex; align-items: center; gap: 7px; font-weight: 600; }
+  .pd-item .gap { font-size: 14px; margin-bottom: 12px; line-height: 1.5; }
+  .pd-item .gap b { font-size: 21px; font-weight: 700; letter-spacing: -0.01em; }
+  .pd-item .wait { font-size: 14px; color: var(--text-secondary); }
+  .pd-item .wait b { font-size: 27px; font-weight: 700; letter-spacing: -0.01em; color: var(--pd-line); }
+  .pd-item .wait small { color: var(--text-secondary); font-size: 13px; font-weight: 500; }
+  .pd-item.ready { border-color: var(--good); }
+  .pd-item .ready-tag { color: var(--good); font-weight: 700; }
+  .pd-note { font-size: 12.5px; color: var(--text-muted); margin: 10px 0 4px; line-height: 1.55; }
+
+  /* card */
+  .card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 18px 18px 8px; box-shadow: var(--shadow); margin-bottom: 24px;
+  }
+  .card h2 { font-size: 16px; margin: 0 0 2px; }
+  .card .hint { font-size: 13px; color: var(--text-secondary); margin: 0 0 8px; }
+  .legend { display: flex; gap: 18px; margin: 4px 0 10px; flex-wrap: wrap; }
+  .legend .item { display: flex; align-items: center; gap: 7px; font-size: 13px; color: var(--text-secondary); }
+  .legend .swatch { width: 22px; height: 3px; border-radius: 2px; }
+  .legend .swatch.a { background: var(--series-a); }
+  .legend .swatch.b { background: var(--series-b); }
+
+  .chart-holder { position: relative; width: 100%; }
+  svg.chart { width: 100%; height: auto; display: block; overflow: visible; }
+  .gridline { stroke: var(--grid); stroke-width: 1; }
+  .axisline { stroke: var(--axis); stroke-width: 1; }
+  .axis-label { fill: var(--text-muted); font-size: 11px; }
+  .series-line { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+  .series-line.a { stroke: var(--series-a); }
+  .series-line.b { stroke: var(--series-b); }
+  .marker { stroke: var(--surface-1); stroke-width: 1.5; }
+  .marker.a { fill: var(--series-a); }
+  .marker.b { fill: var(--series-b); }
+  .hover-line { stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0; }
+  .hover-dot { opacity: 0; stroke: var(--surface-1); stroke-width: 2; }
+
+  .tooltip {
+    position: absolute; pointer-events: none; opacity: 0; transition: opacity .1s;
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    padding: 9px 11px; box-shadow: var(--shadow); font-size: 12.5px; z-index: 5;
+    min-width: 150px; transform: translate(-50%, 0);
+  }
+  .tooltip .tt-title { font-weight: 650; margin-bottom: 5px; font-size: 13px; }
+  .tooltip .tt-row { display: flex; align-items: center; gap: 7px; margin: 2px 0; }
+  .tooltip .tt-row .lab { color: var(--text-secondary); }
+  .tooltip .tt-row .val { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  /* table */
+  .table-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  table { border-collapse: collapse; width: 100%; font-size: 13.5px; }
+  th, td { text-align: left; padding: 9px 12px; white-space: nowrap; }
+  thead th { color: var(--text-secondary); font-weight: 600; border-bottom: 1px solid var(--axis); position: sticky; top: 0; background: var(--card); }
+  tbody td { border-bottom: 1px solid var(--grid); font-variant-numeric: tabular-nums; }
+  tbody tr:hover td { background: var(--page); }
+  td.mono { font-variant-numeric: tabular-nums; }
+  .chg { font-size: 11.5px; color: var(--good); margin-left: 6px; }
+  .badge-cur { color: var(--series-a); font-weight: 600; }
+  .fy-sep td { border-top: 2px solid var(--axis); }
+
+  .notes { font-size: 13px; color: var(--text-secondary); }
+  .notes a { color: var(--series-a); }
+  .notes ul { padding-left: 18px; margin: 8px 0; }
+  .notes li { margin: 4px 0; }
+  footer.foot { margin-top: 26px; font-size: 12px; color: var(--text-muted); text-align: center; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="title-block">
+      <h1>
+        <span class="zh">EB-1 中国大陆签证排期追踪</span>
+        <span class="en">China EB-1 Priority Date Tracker</span>
+      </h1>
+      <p class="sub">
+        <span class="zh">职业移民第一优先（杰出人才）· 数据来自美国国务院签证公告</span>
+        <span class="en">Employment-Based First Preference · Data from the U.S. Dept. of State Visa Bulletin</span>
+      </p>
+    </div>
+    <div class="controls">
+      <button class="btn" id="langBtn" onclick="toggleLang()"><span class="lbl-zh">EN</span><span class="lbl-en">中文</span></button>
+      <button class="btn" id="themeBtn" onclick="toggleTheme()">
+        <span class="zh">深/浅色</span><span class="en">Theme</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="card pd-card">
+    <div class="pd-head">
+      <h2><span class="zh">你的排期预测</span><span class="en">Your Projection</span></h2>
+      <div class="pd-input-wrap">
+        <label for="pdInput"><span class="zh">优先日 PD</span><span class="en">Priority Date</span></label>
+        <input type="month" id="pdInput" min="2005-01" max="2035-12" value="2025-07">
+      </div>
+    </div>
+    <div class="pd-grid" id="pdGrid"></div>
+    <p class="pd-note" id="pdNote"></p>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="card">
+    <h2><span class="zh">排期走势</span><span class="en">Priority Date Movement</span></h2>
+    <p class="hint">
+      <span class="zh">横轴为签证公告月份，纵轴为对应的优先日（Priority Date）截止日期。线越往上，排期越靠前。</span>
+      <span class="en">X-axis: bulletin month. Y-axis: the priority-date cutoff. Higher means a more recent cutoff (faster movement).</span>
+    </p>
+    <div class="legend">
+      <div class="item"><span class="swatch a"></span><span class="zh">表A · 最终裁定日 (Final Action)</span><span class="en">Chart A · Final Action Dates</span></div>
+      <div class="item"><span class="swatch b"></span><span class="zh">表B · 递交申请日 (Dates for Filing)</span><span class="en">Chart B · Dates for Filing</span></div>
+    </div>
+    <div class="chart-holder" id="chartHolder">
+      <svg class="chart" id="chart" role="img" aria-label="EB-1 China priority date chart"></svg>
+      <div class="tooltip" id="tooltip"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="zh">月度数据表</span><span class="en">Monthly Data</span></h2>
+    <p class="hint">
+      <span class="zh">按签证公告月份排列（最新在上）。括号内为较上月的推进天数。</span>
+      <span class="en">By bulletin month, newest first. Parentheses show days advanced vs. the prior month.</span>
+    </p>
+    <div class="table-scroll">
+      <table id="dataTable">
+        <thead>
+          <tr>
+            <th><span class="zh">公告月份</span><span class="en">Bulletin</span></th>
+            <th><span class="dot a" style="display:inline-block"></span> <span class="zh">表A 最终裁定日</span><span class="en">Chart A · Final Action</span></th>
+            <th><span class="dot b" style="display:inline-block"></span> <span class="zh">表B 递交申请日</span><span class="en">Chart B · Dates for Filing</span></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="zh">说明</span><span class="en">Notes</span></h2>
+    <div class="notes">
+      <div class="block zh">
+        <ul>
+          <li><strong>表A（Final Action Dates，最终裁定日）</strong>：优先日早于此日期时，移民签证/绿卡可获批准与签发。</li>
+          <li><strong>表B（Dates for Filing，递交申请日）</strong>：优先日早于此日期时，可提交 I-485 调整身份申请（需 USCIS 当月接受表B）。</li>
+          <li>日期指“优先日截止线”。例如表A为 <em>2023年6月1日</em>，意味优先日在该日之前的申请人可被排到。</li>
+          <li>数据覆盖 2023年10月 至 2026年7月 的月度签证公告（美国财年 FY2024–FY2026）。</li>
+          <li>数据来源：美国国务院签证公告 <a href="https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin.html" target="_blank" rel="noopener">travel.state.gov</a>。本页为信息参考，非法律建议。</li>
+        </ul>
+      </div>
+      <div class="block en">
+        <ul>
+          <li><strong>Chart A (Final Action Dates)</strong>: when your priority date is earlier than this, an immigrant visa / green card can be approved and issued.</li>
+          <li><strong>Chart B (Dates for Filing)</strong>: when your priority date is earlier than this, you may file the I-485 adjustment of status (only in months USCIS accepts Chart B).</li>
+          <li>Each value is a priority-date cutoff. E.g. Chart A = <em>June 1, 2023</em> means applicants with a priority date before that date are eligible.</li>
+          <li>Coverage: monthly bulletins from October 2023 to July 2026 (U.S. fiscal years FY2024–FY2026).</li>
+          <li>Source: U.S. Dept. of State Visa Bulletin, <a href="https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin.html" target="_blank" rel="noopener">travel.state.gov</a>. For information only; not legal advice.</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <footer class="foot">
+    <span class="zh">最后更新数据：2026年7月签证公告 · 由 Claude 生成</span>
+    <span class="en">Data current through the July 2026 Visa Bulletin · Built with Claude</span>
+  </footer>
+</div>
+
+<script>
+// ---------- Raw data: [bulletin YYYY-MM, Chart A (Final Action), Chart B (Dates for Filing)] ----------
+const RAW = [
+  ["2023-10","15FEB22","01AUG22"],
+  ["2023-11","15FEB22","01AUG22"],
+  ["2023-12","15FEB22","01AUG22"],
+  ["2024-01","01JUL22","01JAN23"],
+  ["2024-02","01JUL22","01JAN23"],
+  ["2024-03","15JUL22","01JAN23"],
+  ["2024-04","01SEP22","01JAN23"],
+  ["2024-05","01SEP22","01JAN23"],
+  ["2024-06","01SEP22","01JAN23"],
+  ["2024-07","01NOV22","01JAN23"],
+  ["2024-08","01NOV22","01JAN23"],
+  ["2024-09","01NOV22","01JAN23"],
+  ["2024-10","08NOV22","01JAN23"],
+  ["2024-11","08NOV22","01JAN23"],
+  ["2024-12","08NOV22","01JAN23"],
+  ["2025-01","08NOV22","01JAN23"],
+  ["2025-02","08NOV22","01JAN23"],
+  ["2025-03","08NOV22","01JAN23"],
+  ["2025-04","08NOV22","01JAN23"],
+  ["2025-05","08NOV22","01JAN23"],
+  ["2025-06","08NOV22","01JAN23"],
+  ["2025-07","15NOV22","01JAN23"],
+  ["2025-08","15NOV22","01JAN23"],
+  ["2025-09","15NOV22","01JAN23"],
+  ["2025-10","22DEC22","15MAY23"],
+  ["2025-11","22DEC22","15MAY23"],
+  ["2025-12","22JAN23","15MAY23"],
+  ["2026-01","01FEB23","01AUG23"],
+  ["2026-02","01FEB23","01AUG23"],
+  ["2026-03","01MAR23","01DEC23"],
+  ["2026-04","01APR23","01DEC23"],
+  ["2026-05","01APR23","01DEC23"],
+  ["2026-06","01APR23","01DEC23"],
+  ["2026-07","01JUN23","01DEC23"],
+];
+
+const MON = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+const MON_NAMES_ZH = ["1月","2月","3月","4月","5月","6月","7月","8月","9月","10月","11月","12月"];
+const MON_NAMES_EN = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+// parse "01JUN23" -> Date
+function parsePD(s){
+  if (s === "C" || s === "U") return null;
+  const d = parseInt(s.slice(0,2),10);
+  const m = MON[s.slice(2,5)];
+  const y = 2000 + parseInt(s.slice(5,7),10);
+  return new Date(Date.UTC(y, m, d));
+}
+// parse bulletin "2026-07" -> Date (first of month)
+function parseBul(s){
+  const [y,m] = s.split("-").map(Number);
+  return new Date(Date.UTC(y, m-1, 1));
+}
+function fmtPD(dt, lang){
+  if (!dt) return lang==="en" ? "Current" : "无排期(C)";
+  const y = dt.getUTCFullYear(), m = dt.getUTCMonth(), d = dt.getUTCDate();
+  if (lang==="en") return MON_NAMES_EN[m] + " " + d + ", " + y;
+  return y + "年" + MON_NAMES_ZH[m].replace("月","") + "月" + d + "日";
+}
+function fmtBul(dt, lang){
+  const y = dt.getUTCFullYear(), m = dt.getUTCMonth();
+  return lang==="en" ? (MON_NAMES_EN[m] + " " + y) : (y + "年" + (m+1) + "月");
+}
+function fmtBulShort(dt, lang){
+  const y = dt.getUTCFullYear(), m = dt.getUTCMonth();
+  return lang==="en" ? (MON_NAMES_EN[m] + " '" + String(y).slice(2)) : ((m+1) + "月'" + String(y).slice(2));
+}
+
+const DATA = RAW.map(r => ({
+  key: r[0],
+  bul: parseBul(r[0]),
+  aRaw: r[1], bRaw: r[2],
+  a: parsePD(r[1]),
+  b: parsePD(r[2]),
+}));
+
+const DAY = 86400000;
+let userPD = new Date(Date.UTC(2025, 6, 1)); // 2025-07
+
+function getLang(){ return document.documentElement.getAttribute("data-lang") === "en" ? "en" : "zh"; }
+
+// ---------- Personal projection ----------
+function paceInfo(accessor){
+  const n = DATA.length;
+  const last = accessor(DATA[n-1]);
+  const i12 = n-1-12;
+  const p12 = (i12>=0 && accessor(DATA[i12])) ? (last - accessor(DATA[i12]))/DAY/12 : null; // PD-days advanced per calendar month
+  const pFull = (last - accessor(DATA[0]))/DAY/(n-1);
+  return { last, p12, pFull };
+}
+function renderProjection(){
+  const lang = getLang();
+  const pd = userPD;
+  const t = (zh,en)=> lang==="en"?en:zh;
+  const specs = [
+    { cls:"b", acc:d=>d.b, title:t("表B · 可递交 I-485","Chart B · File I-485") },
+    { cls:"a", acc:d=>d.a, title:t("表A · 绿卡获批","Chart A · Green Card Approval") },
+  ];
+  const html = specs.map(s=>{
+    const { last, p12, pFull } = paceInfo(s.acc);
+    const gap = Math.round((pd - last)/DAY); // >0 => PD ahead of cutoff => must wait
+    if (gap <= 0){
+      return `<div class="pd-item ready ${s.cls}">
+        <div class="lab"><span class="dot ${s.cls}"></span>${s.title}</div>
+        <div class="gap"><span class="ready-tag">${t("✓ 优先日已早于当前截止线","✓ PD already past the cutoff")}</span></div>
+        <div class="wait">${t("按当前公告即可推进。","Eligible under the current bulletin.")}</div>
+      </div>`;
+    }
+    const gapM = Math.round(gap/30.44);
+    const paces = [p12, pFull].filter(p=>p && p>0);
+    let waitHtml;
+    if (paces.length===0){
+      waitHtml = `<b style="font-size:16px">—</b> <small>${t("近期停滞，暂无法估算","stalled — can't estimate")}</small>`;
+    } else {
+      const waitsYr = paces.map(p => (gap/p)/12);
+      const lo = Math.min(...waitsYr), hi = Math.max(...waitsYr);
+      const range = (Math.abs(hi-lo) < 0.2) ? lo.toFixed(1) : `${lo.toFixed(1)}–${hi.toFixed(1)}`;
+      waitHtml = `<b>${range}</b> <small>${t("年","yr")}</small>`;
+    }
+    return `<div class="pd-item ${s.cls}">
+      <div class="lab"><span class="dot ${s.cls}"></span>${s.title}</div>
+      <div class="gap">${t("领先当前截止线","Ahead of cutoff by")} <b>${gapM}</b> ${t("个月","mo")}
+        <br><small style="color:var(--text-muted)">${t("当前截止线","current cutoff")}: ${fmtPD(last,lang)}</small></div>
+      <div class="wait">${t("预计还需","Est. remaining wait")} ${waitHtml}</div>
+    </div>`;
+  }).join("");
+  document.getElementById("pdGrid").innerHTML = html;
+  document.getElementById("pdNote").innerHTML = t(
+    "估算方法：用「你的优先日 − 当前截止线」的差额，除以两种平均推进速度（近12个月、以及全期平均），得到区间。这是粗略线性外推，仅供参考；实际排期受名额、需求与政策影响，可能更快、更慢，甚至出现倒退(retrogression)。本页非法律建议。",
+    "Method: (your PD − current cutoff) divided by two average paces (trailing 12-month and full-history) gives the range. This is a rough linear extrapolation for reference only; real movement depends on quotas, demand and policy, and can be faster, slower, or retrogress. Not legal advice."
+  );
+}
+
+// ---------- Stat tiles ----------
+function renderTiles(){
+  const lang = getLang();
+  const last = DATA[DATA.length-1];
+  const prev = DATA[DATA.length-2];
+  // 12 months ago
+  const idx12 = DATA.length-1-12;
+  const y12 = idx12 >= 0 ? DATA[idx12] : DATA[0];
+  const advA12 = Math.round((last.a - y12.a)/DAY);
+  const advB12 = Math.round((last.b - y12.b)/DAY);
+  const monthsA12 = (advA12/30.44).toFixed(1);
+  const monthsB12 = (advB12/30.44).toFixed(1);
+  const dA = Math.round((last.a - prev.a)/DAY);
+  const dB = Math.round((last.b - prev.b)/DAY);
+
+  const t = (zh,en)=> lang==="en"?en:zh;
+  const advTxt = (n)=> lang==="en" ? (n>0? "+"+n+" days":"no change") : (n>0? "推进 "+n+" 天":"未变动");
+
+  const tiles = [
+    {
+      k: `<span class="dot a"></span>` + t("最新 表A 最终裁定日","Latest · Chart A"),
+      v: fmtPD(last.a, lang),
+      m: dA>0 ? advTxt(dA) : t("较上月未变","unchanged vs. last month"),
+      up: dA>0
+    },
+    {
+      k: `<span class="dot b"></span>` + t("最新 表B 递交申请日","Latest · Chart B"),
+      v: fmtPD(last.b, lang),
+      m: dB>0 ? advTxt(dB) : t("较上月未变","unchanged vs. last month"),
+      up: dB>0
+    },
+    {
+      k: t("表A 过去12个月推进","Chart A · 12-mo advance"),
+      v: `${monthsA12}<small> ${t("个月","mo")}</small>`,
+      m: t(`共 ${advA12} 天`, `${advA12} days total`),
+      up: advA12>0
+    },
+    {
+      k: t("表B 过去12个月推进","Chart B · 12-mo advance"),
+      v: `${monthsB12}<small> ${t("个月","mo")}</small>`,
+      m: t(`共 ${advB12} 天`, `${advB12} days total`),
+      up: advB12>0
+    },
+  ];
+  document.getElementById("tiles").innerHTML = tiles.map(x=>`
+    <div class="tile">
+      <div class="k">${x.k}</div>
+      <div class="v">${x.v}</div>
+      <div class="m ${x.up?'up':''}">${x.m}</div>
+    </div>`).join("");
+}
+
+// ---------- Chart ----------
+function renderChart(){
+  const lang = getLang();
+  const svg = document.getElementById("chart");
+  const holder = document.getElementById("chartHolder");
+  const W = Math.max(holder.clientWidth || 900, 320);
+  const H = W < 560 ? 300 : 380;
+  const m = { top: 16, right: 16, bottom: 40, left: W<560?52:64 };
+  const iw = W - m.left - m.right;
+  const ih = H - m.top - m.bottom;
+
+  // y domain: priority dates
+  const allPD = DATA.flatMap(d=>[d.a,d.b]).filter(Boolean);
+  const pdT = userPD.getTime();
+  let yMin = Math.min(...allPD.map(d=>d.getTime()));
+  let yMax = Math.max(...allPD.map(d=>d.getTime()), pdT);
+  // pad
+  const yPad = (yMax - yMin) * 0.08 || DAY*30;
+  yMin -= yPad; yMax += yPad;
+  // x domain: bulletin index
+  const n = DATA.length;
+
+  const xOf = i => m.left + (n===1?iw/2:(i/(n-1))*iw);
+  const yOf = t => m.top + ih - ((t - yMin)/(yMax - yMin))*ih;
+
+  const NS = "http://www.w3.org/2000/svg";
+  svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+  svg.innerHTML = "";
+
+  // y gridlines at Jan/Jul boundaries within range
+  const yTicks = [];
+  let startY = new Date(Date.UTC(new Date(yMin).getUTCFullYear(), 0, 1));
+  for (let ty = startY.getTime(); ty <= yMax + DAY*200; ){
+    const dt = new Date(ty);
+    // step by 3 months
+    yTicks.push(new Date(Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth(), 1)));
+    ty = Date.UTC(dt.getUTCFullYear(), dt.getUTCMonth()+3, 1);
+  }
+  yTicks.forEach(tk=>{
+    const tt = tk.getTime();
+    if (tt < yMin || tt > yMax) return;
+    const y = yOf(tt);
+    const line = document.createElementNS(NS,"line");
+    line.setAttribute("class","gridline");
+    line.setAttribute("x1",m.left); line.setAttribute("x2",m.left+iw);
+    line.setAttribute("y1",y); line.setAttribute("y2",y);
+    svg.appendChild(line);
+    const lab = document.createElementNS(NS,"text");
+    lab.setAttribute("class","axis-label");
+    lab.setAttribute("x", m.left-8); lab.setAttribute("y", y+3);
+    lab.setAttribute("text-anchor","end");
+    lab.textContent = fmtBulShort(tk, lang);
+    svg.appendChild(lab);
+  });
+
+  // x axis labels: every few months + FY starts (October)
+  DATA.forEach((d,i)=>{
+    const isOct = d.bul.getUTCMonth()===9;
+    const showLabel = isOct || i===0 || i===n-1 || i%3===0;
+    if (isOct){
+      const xl = document.createElementNS(NS,"line");
+      xl.setAttribute("class","gridline");
+      xl.setAttribute("x1",xOf(i)); xl.setAttribute("x2",xOf(i));
+      xl.setAttribute("y1",m.top); xl.setAttribute("y2",m.top+ih);
+      xl.setAttribute("stroke-dasharray","2 3");
+      svg.appendChild(xl);
+    }
+    if (showLabel){
+      const lab = document.createElementNS(NS,"text");
+      lab.setAttribute("class","axis-label");
+      lab.setAttribute("x", xOf(i)); lab.setAttribute("y", m.top+ih+18);
+      lab.setAttribute("text-anchor","middle");
+      lab.textContent = fmtBulShort(d.bul, lang);
+      svg.appendChild(lab);
+    }
+  });
+
+  // baseline
+  const base = document.createElementNS(NS,"line");
+  base.setAttribute("class","axisline");
+  base.setAttribute("x1",m.left); base.setAttribute("x2",m.left+iw);
+  base.setAttribute("y1",m.top+ih); base.setAttribute("y2",m.top+ih);
+  svg.appendChild(base);
+
+  function pathFor(accessor){
+    return DATA.map((d,i)=>{
+      const v = accessor(d);
+      if (!v) return null;
+      return `${xOf(i).toFixed(1)},${yOf(v.getTime()).toFixed(1)}`;
+    }).filter(Boolean).map((p,i)=>(i===0?"M":"L")+p).join(" ");
+  }
+  // Chart B first (behind), then A
+  const pB = document.createElementNS(NS,"path");
+  pB.setAttribute("class","series-line b");
+  pB.setAttribute("d", pathFor(d=>d.b));
+  svg.appendChild(pB);
+  const pA = document.createElementNS(NS,"path");
+  pA.setAttribute("class","series-line a");
+  pA.setAttribute("d", pathFor(d=>d.a));
+  svg.appendChild(pA);
+
+  // markers
+  DATA.forEach((d,i)=>{
+    [["b",d.b],["a",d.a]].forEach(([cls,v])=>{
+      if(!v) return;
+      const c = document.createElementNS(NS,"circle");
+      c.setAttribute("class","marker "+cls);
+      c.setAttribute("cx",xOf(i)); c.setAttribute("cy",yOf(v.getTime()));
+      c.setAttribute("r", n>28?2.6:3.2);
+      svg.appendChild(c);
+    });
+  });
+
+  // direct end labels
+  const last = DATA[n-1];
+  [["a",last.a,"var(--series-a)"],["b",last.b,"var(--series-b)"]].forEach(([cls,v,col])=>{
+    if(!v) return;
+    const lab = document.createElementNS(NS,"text");
+    lab.setAttribute("x", xOf(n-1)); lab.setAttribute("y", yOf(v.getTime()) + (cls==="a"?-9:16));
+    lab.setAttribute("text-anchor","end");
+    lab.setAttribute("font-size","11.5"); lab.setAttribute("font-weight","600");
+    lab.setAttribute("fill", col);
+    lab.textContent = fmtPD(v, lang);
+    svg.appendChild(lab);
+  });
+
+  // PD reference line
+  if (pdT >= yMin && pdT <= yMax){
+    const pdY = yOf(pdT);
+    const pl = document.createElementNS(NS,"line");
+    pl.setAttribute("x1",m.left); pl.setAttribute("x2",m.left+iw);
+    pl.setAttribute("y1",pdY); pl.setAttribute("y2",pdY);
+    pl.setAttribute("stroke","var(--pd-line)");
+    pl.setAttribute("stroke-width","1.5");
+    pl.setAttribute("stroke-dasharray","5 4");
+    svg.appendChild(pl);
+    const pt = document.createElementNS(NS,"text");
+    pt.setAttribute("x", m.left+6); pt.setAttribute("y", pdY-6);
+    pt.setAttribute("font-size","11.5"); pt.setAttribute("font-weight","700");
+    pt.setAttribute("fill","var(--pd-line)");
+    pt.textContent = (lang==="en"?"Your PD · ":"你的PD · ") + fmtPD(userPD, lang);
+    svg.appendChild(pt);
+  }
+
+  // hover layer
+  const hLine = document.createElementNS(NS,"line");
+  hLine.setAttribute("class","hover-line");
+  hLine.setAttribute("y1",m.top); hLine.setAttribute("y2",m.top+ih);
+  svg.appendChild(hLine);
+  const hA = document.createElementNS(NS,"circle"); hA.setAttribute("class","hover-dot"); hA.setAttribute("r",5); hA.setAttribute("fill","var(--series-a)"); svg.appendChild(hA);
+  const hB = document.createElementNS(NS,"circle"); hB.setAttribute("class","hover-dot"); hB.setAttribute("r",5); hB.setAttribute("fill","var(--series-b)"); svg.appendChild(hB);
+
+  const tooltip = document.getElementById("tooltip");
+  const overlay = document.createElementNS(NS,"rect");
+  overlay.setAttribute("x",m.left); overlay.setAttribute("y",m.top);
+  overlay.setAttribute("width",iw); overlay.setAttribute("height",ih);
+  overlay.setAttribute("fill","transparent");
+  svg.appendChild(overlay);
+
+  function moveHover(clientX){
+    const rect = svg.getBoundingClientRect();
+    const scale = W / rect.width;
+    const px = (clientX - rect.left) * scale;
+    let idx = Math.round(((px - m.left)/iw)*(n-1));
+    idx = Math.max(0, Math.min(n-1, idx));
+    const d = DATA[idx];
+    const lang2 = getLang();
+    const x = xOf(idx);
+    hLine.setAttribute("x1",x); hLine.setAttribute("x2",x); hLine.style.opacity=1;
+    if(d.a){ hA.setAttribute("cx",x); hA.setAttribute("cy",yOf(d.a.getTime())); hA.style.opacity=1; } else hA.style.opacity=0;
+    if(d.b){ hB.setAttribute("cx",x); hB.setAttribute("cy",yOf(d.b.getTime())); hB.style.opacity=1; } else hB.style.opacity=0;
+    const tA = lang2==="en"?"Chart A":"表A";
+    const tB = lang2==="en"?"Chart B":"表B";
+    tooltip.innerHTML = `
+      <div class="tt-title">${fmtBul(d.bul, lang2)}</div>
+      <div class="tt-row"><span class="dot a"></span><span class="lab">${tA}</span><span class="val">${fmtPD(d.a,lang2)}</span></div>
+      <div class="tt-row"><span class="dot b"></span><span class="lab">${tB}</span><span class="val">${fmtPD(d.b,lang2)}</span></div>`;
+    const relX = x / W * rect.width;
+    tooltip.style.left = relX + "px";
+    tooltip.style.top = (m.top*rect.width/W + 4) + "px";
+    tooltip.style.opacity = 1;
+    // keep in bounds
+    const tw = tooltip.offsetWidth;
+    let lx = relX;
+    if (lx - tw/2 < 0) tooltip.style.transform = "translate(0,0)", tooltip.style.left = "4px";
+    else if (lx + tw/2 > rect.width) tooltip.style.transform = "translate(-100%,0)", tooltip.style.left = (rect.width-4)+"px";
+    else tooltip.style.transform = "translate(-50%,0)";
+  }
+  function hideHover(){ hLine.style.opacity=0; hA.style.opacity=0; hB.style.opacity=0; tooltip.style.opacity=0; }
+  overlay.addEventListener("mousemove", e=>moveHover(e.clientX));
+  overlay.addEventListener("mouseleave", hideHover);
+  overlay.addEventListener("touchmove", e=>{ if(e.touches[0]) moveHover(e.touches[0].clientX); }, {passive:true});
+  overlay.addEventListener("touchstart", e=>{ if(e.touches[0]) moveHover(e.touches[0].clientX); }, {passive:true});
+}
+
+// ---------- Table ----------
+function renderTable(){
+  const lang = getLang();
+  const body = document.getElementById("tableBody");
+  const rows = [];
+  for (let i=DATA.length-1; i>=0; i--){
+    const d = DATA[i];
+    const prev = i>0 ? DATA[i-1] : null;
+    const dA = prev && d.a && prev.a ? Math.round((d.a-prev.a)/DAY) : 0;
+    const dB = prev && d.b && prev.b ? Math.round((d.b-prev.b)/DAY) : 0;
+    const chgA = dA>0 ? `<span class="chg">+${dA}${lang==="en"?"d":"天"}</span>` : "";
+    const chgB = dB>0 ? `<span class="chg">+${dB}${lang==="en"?"d":"天"}</span>` : "";
+    const isOct = d.bul.getUTCMonth()===9;
+    rows.push(`<tr class="${isOct?'fy-sep':''}">
+      <td>${fmtBul(d.bul, lang)}</td>
+      <td class="mono">${fmtPD(d.a,lang)}${chgA}</td>
+      <td class="mono">${fmtPD(d.b,lang)}${chgB}</td>
+    </tr>`);
+  }
+  body.innerHTML = rows.join("");
+}
+
+// ---------- Controls ----------
+function renderAll(){ renderProjection(); renderTiles(); renderChart(); renderTable(); }
+function toggleLang(){
+  const cur = document.documentElement.getAttribute("data-lang");
+  const next = cur==="en" ? "zh" : "en";
+  document.documentElement.setAttribute("data-lang", next);
+  document.documentElement.setAttribute("lang", next==="en"?"en":"zh");
+  renderAll();
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute("data-theme");
+  const next = cur==="dark" ? "light" : "dark";
+  document.documentElement.setAttribute("data-theme", next);
+  renderChart();
+}
+// init theme from system
+(function(){
+  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
+  document.documentElement.setAttribute("data-lang","zh");
+})();
+document.getElementById("pdInput").addEventListener("change", e=>{
+  const parts = (e.target.value||"").split("-").map(Number);
+  if (parts.length===2 && parts[0] && parts[1]){
+    userPD = new Date(Date.UTC(parts[0], parts[1]-1, 1));
+    renderProjection(); renderChart();
+  }
+});
+window.addEventListener("resize", (()=>{ let t; return ()=>{ clearTimeout(t); t=setTimeout(renderChart,120); }; })());
+renderAll();
+</script>
+</body>
+</html>
