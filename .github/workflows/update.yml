@@ -2,13 +2,11 @@ name: Update Visa Bulletin Data
 
 on:
   schedule:
-    # Runs every day at 12:00 UTC. Visa Bulletins are monthly, so most days
-    # nothing changes and no commit is made — it just catches the new one fast.
     - cron: "0 12 * * *"
-  workflow_dispatch: {}   # lets you run it manually from the Actions tab
+  workflow_dispatch: {}
 
 permissions:
-  contents: write          # allow the job to commit updated data back to the repo
+  contents: write
 
 jobs:
   update:
@@ -26,7 +24,74 @@ jobs:
         run: pip install requests beautifulsoup4
 
       - name: Fetch latest bulletin and update data
-        run: python update_data.py
+        run: |
+          cat > update_data.py <<'PYEOF'
+          import re, sys, requests
+          from bs4 import BeautifulSoup, NavigableString
+          HTML="index.html"
+          SLUG=["january","february","march","april","may","june","july","august","september","october","november","december"]
+          VAL=re.compile(r"^(C|U|\d{2}[A-Z]{3}\d{2})$")
+          HDR={"User-Agent":"Mozilla/5.0 (GreenCardTracker)"}
+          def url(y,m):
+              fy=y+1 if m>=10 else y
+              return f"https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin/{fy}/visa-bulletin-for-{SLUG[m-1]}-{y}.html"
+          def cell(table):
+              rows=table.find_all("tr")
+              if not rows: return None
+              hd=[c.get_text(" ",strip=True).upper() for c in rows[0].find_all(["td","th"])]
+              ci=next((i for i,h in enumerate(hd) if "CHINA" in h),None)
+              if ci is None: return None
+              for r in rows[1:]:
+                  cs=[c.get_text(" ",strip=True) for c in r.find_all(["td","th"])]
+                  if cs and cs[0].strip().upper().replace(".","").startswith("1ST"):
+                      if ci<len(cs):
+                          v=cs[ci].strip().upper().replace(" ","")
+                          return v if VAL.match(v) else None
+              return None
+          def parse(html):
+              soup=BeautifulSoup(html,"html.parser")
+              sec=None; a=b=None
+              for el in soup.descendants:
+                  if isinstance(el,NavigableString):
+                      t=" ".join(str(el).upper().split())
+                      if "FINAL ACTION" not in t and "DATES FOR FILING" not in t: continue
+                      if "EMPLOYMENT" in t and "FINAL ACTION" in t: sec="A"
+                      elif "EMPLOYMENT" in t and "DATES FOR FILING" in t: sec="B"
+                      elif "FAMILY" in t: sec="FAM"
+                  elif getattr(el,"name",None)=="table" and sec in ("A","B"):
+                      v=cell(el)
+                      if v:
+                          if sec=="A" and a is None: a=v
+                          elif sec=="B" and b is None: b=v
+              return a,b
+          def nxt(y,m): return (y+1,1) if m==12 else (y,m+1)
+          def main():
+              text=open(HTML,encoding="utf-8").read()
+              mt=re.search(r"/\*DATA_START\*/(.*?)/\*DATA_END\*/",text,re.S)
+              if not mt: sys.exit("markers not found")
+              ent=[(int(y),int(mo),a,b) for y,mo,a,b in re.findall(r'\["(\d{4})-(\d{2})","([^"]+)","([^"]+)"\]',mt.group(1))]
+              if not ent: sys.exit("no entries")
+              ent.sort(); have={(y,m) for y,m,_,_ in ent}
+              y,m=nxt(ent[-1][0],ent[-1][1]); added=[]
+              for _ in range(3):
+                  if (y,m) in have: y,m=nxt(y,m); continue
+                  try: r=requests.get(url(y,m),headers=HDR,timeout=30)
+                  except Exception as e: print("skip",y,m,e); break
+                  if r.status_code==404: print("stop: not published yet",y,m); break
+                  if r.status_code!=200: print("stop: HTTP",r.status_code); break
+                  a,b=parse(r.text)
+                  if a and b: added.append((y,m,a,b)); print("add",y,m,a,b)
+                  else: print("warn: page found but not parsed",y,m,a,b); break
+                  y,m=nxt(y,m)
+              if not added: print("No new bulletins. index.html unchanged."); return
+              alln=sorted(ent+added)
+              lines="".join(f'  ["{yy}-{mm:02d}","{a}","{b}"],\n' for yy,mm,a,b in alln)
+              nb="/*DATA_START*/\n"+lines+"/*DATA_END*/"
+              open(HTML,"w",encoding="utf-8").write(re.sub(r"/\*DATA_START\*/.*?/\*DATA_END\*/",lambda _:nb,text,flags=re.S))
+              print("Updated: added",len(added),"month(s)")
+          main()
+          PYEOF
+          python update_data.py
 
       - name: Commit changes if any
         run: |
