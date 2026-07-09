@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>EB-1 中国大陆排期追踪 · China EB-1 Priority Date Tracker</title>
+<title>Kevin &amp; Grace - Green Card Tracker</title>
 <style>
   :root {
     --surface-1: #fcfcfb;
@@ -176,8 +176,8 @@
   <header class="top">
     <div class="title-block">
       <h1>
-        <span class="zh">EB-1 中国大陆签证排期追踪</span>
-        <span class="en">China EB-1 Priority Date Tracker</span>
+        <span class="zh">Kevin &amp; Grace · 绿卡排期追踪</span>
+        <span class="en">Kevin &amp; Grace - Green Card Tracker</span>
       </h1>
       <p class="sub">
         <span class="zh">职业移民第一优先（杰出人才）· 数据来自美国国务院签证公告</span>
@@ -250,7 +250,7 @@
           <li><strong>表A（Final Action Dates，最终裁定日）</strong>：优先日早于此日期时，移民签证/绿卡可获批准与签发。</li>
           <li><strong>表B（Dates for Filing，递交申请日）</strong>：优先日早于此日期时，可提交 I-485 调整身份申请（需 USCIS 当月接受表B）。</li>
           <li>日期指“优先日截止线”。例如表A为 <em>2023年6月1日</em>，意味优先日在该日之前的申请人可被排到。</li>
-          <li>数据覆盖 2023年10月 至 2026年7月 的月度签证公告（美国财年 FY2024–FY2026）。</li>
+          <li>数据覆盖 <span id="covZh"></span> 的月度签证公告（美国财年 FY2024 起）。</li>
           <li>数据来源：美国国务院签证公告 <a href="https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin.html" target="_blank" rel="noopener">travel.state.gov</a>。本页为信息参考，非法律建议。</li>
         </ul>
       </div>
@@ -259,7 +259,7 @@
           <li><strong>Chart A (Final Action Dates)</strong>: when your priority date is earlier than this, an immigrant visa / green card can be approved and issued.</li>
           <li><strong>Chart B (Dates for Filing)</strong>: when your priority date is earlier than this, you may file the I-485 adjustment of status (only in months USCIS accepts Chart B).</li>
           <li>Each value is a priority-date cutoff. E.g. Chart A = <em>June 1, 2023</em> means applicants with a priority date before that date are eligible.</li>
-          <li>Coverage: monthly bulletins from October 2023 to July 2026 (U.S. fiscal years FY2024–FY2026).</li>
+          <li>Coverage: monthly bulletins <span id="covEn"></span> (from U.S. fiscal year FY2024).</li>
           <li>Source: U.S. Dept. of State Visa Bulletin, <a href="https://travel.state.gov/content/travel/en/legal/visa-law0/visa-bulletin.html" target="_blank" rel="noopener">travel.state.gov</a>. For information only; not legal advice.</li>
         </ul>
       </div>
@@ -267,14 +267,15 @@
   </div>
 
   <footer class="foot">
-    <span class="zh">最后更新数据：2026年7月签证公告 · 由 Claude 生成</span>
-    <span class="en">Data current through the July 2026 Visa Bulletin · Built with Claude</span>
+    <span class="zh" id="footZh"></span>
+    <span class="en" id="footEn"></span>
   </footer>
 </div>
 
 <script>
 // ---------- Raw data: [bulletin YYYY-MM, Chart A (Final Action), Chart B (Dates for Filing)] ----------
 const RAW = [
+/*DATA_START*/
   ["2023-10","15FEB22","01AUG22"],
   ["2023-11","15FEB22","01AUG22"],
   ["2023-12","15FEB22","01AUG22"],
@@ -309,6 +310,7 @@ const RAW = [
   ["2026-05","01APR23","01DEC23"],
   ["2026-06","01APR23","01DEC23"],
   ["2026-07","01JUN23","01DEC23"],
+/*DATA_END*/
 ];
 
 const MON = {JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
@@ -678,7 +680,16 @@ function renderTable(){
 }
 
 // ---------- Controls ----------
-function renderAll(){ renderProjection(); renderTiles(); renderChart(); renderTable(); }
+function renderMeta(){
+  const first = DATA[0].bul, last = DATA[DATA.length-1].bul;
+  const fz=document.getElementById('footZh'), fe=document.getElementById('footEn');
+  if(fz) fz.textContent = `最后更新数据：${fmtBul(last,'zh')}签证公告 · 由 Claude 生成`;
+  if(fe) fe.textContent = `Data current through the ${fmtBul(last,'en')} Visa Bulletin · Built with Claude`;
+  const cz=document.getElementById('covZh'), ce=document.getElementById('covEn');
+  if(cz) cz.textContent = `${fmtBul(first,'zh')} 至 ${fmtBul(last,'zh')}`;
+  if(ce) ce.textContent = `${fmtBul(first,'en')} – ${fmtBul(last,'en')}`;
+}
+function renderAll(){ renderMeta(); renderProjection(); renderTiles(); renderChart(); renderTable(); }
 function toggleLang(){
   const cur = document.documentElement.getAttribute("data-lang");
   const next = cur==="en" ? "zh" : "en";
@@ -694,8 +705,7 @@ function toggleTheme(){
 }
 // init theme from system
 (function(){
-  const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  document.documentElement.setAttribute("data-theme", prefersDark ? "dark" : "light");
+  document.documentElement.setAttribute("data-theme", "dark");
   document.documentElement.setAttribute("data-lang","zh");
 })();
 document.getElementById("pdInput").addEventListener("change", e=>{
